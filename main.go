@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/djherbis/times"
@@ -26,6 +27,12 @@ func main() {
 	creation_time := data.Format.Tags["creation_time"]
 
 	t, err := time.Parse(time.RFC3339, creation_time)
+
+	if strings.HasPrefix(filename, "GO") {
+		fmt.Println("Detected GoPro media, subtracting 8 hours")
+		t = t.Add(-8 * time.Hour)
+	}
+
 	if err != nil {
 		panic(err)
 	}
@@ -59,11 +66,13 @@ func main() {
 		}
 	}
 	// Not neccessary
-	err = os.Chtimes(filename, t, t)
-	if err == nil {
-		fmt.Println("Set Filetime to capture time", t)
-	}
+	//err = os.Chtimes(filename, t, t)
+	//if err == nil {
+	//	fmt.Println("Set Filetime to capture time", t)
+	//}
+
 	// -d date           # creation date (mm/dd/[yy]yy [hh:mm[:ss] [AM | PM]])*
 	fmt.Printf("setfile -d \"%s\" %s\n", t.Local().Format("01/02/2006 15:04:05"), filename)
+	//fmt.Printf("setfile -d \"%s\" %s\n", t.Format("01/02/2006 15:04:05"), filename)
 
 }
