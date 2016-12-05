@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"time"
+
+	"github.com/djherbis/times"
 )
 
 func main() {
@@ -12,48 +14,56 @@ func main() {
 		fmt.Println("Missing filename")
 		os.Exit(2)
 	}
-	ds := "2016-11-29T05:44:56.000000Z"
-	t, _ := time.Parse(time.RFC3339, ds)
+	filename := os.Args[1]
+
+	fmt.Println("Probing", filename, "for capture time in Metadata")
+	data, err := Probe(filename)
+	if err != nil {
+		panic(err)
+	}
+
+	// fmt.Println(data.Format.Tags)
+	creation_time := data.Format.Tags["creation_time"]
+
+	t, err := time.Parse(time.RFC3339, creation_time)
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Println(t, "Metadata")
 	fmt.Println(t.Local(), "Metadata in localtime")
 
-	filename := os.Args[1]
 	info, err := os.Stat(filename)
 	if err != nil {
 		log.Panic(err)
 	}
-	fmt.Println(info.ModTime(), "ModTime")
+	fmt.Println(info.ModTime(), "File modification time")
 
-	duration := t.Sub(info.ModTime())
-	switch {
-	case duration < 0:
-		fmt.Println("actual capture time in the future by", -duration)
-		err = os.Chtimes(filename, t, t)
-		if err != nil {
-			fmt.Println("Set filetime to capture time", t)
-		}
-	case duration > 0:
-		fmt.Println("actual capture time is in the past by", duration)
-		err = os.Chtimes(filename, t, t)
-		if err != nil {
-			fmt.Println("Set filetime to capture time", t)
-		}
-	case duration == 0:
-		fmt.Println("ModTime time matches Metadata")
-		os.Exit(0)
+	tb, err := times.Stat(filename)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 
-	fmt.Println("Changing time to", t)
+	if tb.HasBirthTime() {
+		fmt.Println(tb.BirthTime(), "File creation time")
+
+		duration := t.Sub(tb.BirthTime())
+		switch {
+		case duration < 0:
+			fmt.Println(filename, "capture time in the future by", -duration)
+		case duration > 0:
+			fmt.Println(filename, "capture time is in the past by", duration)
+		case duration == 0:
+			fmt.Println(filename, "Filetime matches Metadata capture time")
+			os.Exit(0)
+		}
+	}
+	// Not neccessary
 	err = os.Chtimes(filename, t, t)
+	if err == nil {
+		fmt.Println("Set Filetime to capture time", t)
+	}
+	// -d date           # creation date (mm/dd/[yy]yy [hh:mm[:ss] [AM | PM]])*
+	fmt.Printf("setfile -d \"%s\" %s\n", t.Local().Format("01/02/2006 15:04:05"), filename)
 
-	//info, err = os.Stat(filename)
-	//if err != nil {
-	//	log.Panic(err)
-	//}
-	//fmt.Println(info.ModTime())
-
-	//	data, err := Probe(filename)
-	//	if err != nil {
-	//		panic(err)
-	//	}
 }
