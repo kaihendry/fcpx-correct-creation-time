@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -73,6 +74,12 @@ func main() {
 
 	// -d date           # creation date (mm/dd/[yy]yy [hh:mm[:ss] [AM | PM]])*
 	fmt.Printf("setfile -d \"%s\" %s\n", t.Local().Format("01/02/2006 15:04:05"), filename)
+	cmd := exec.Command("/usr/bin/setfile", "-d", t.Local().Format("01/02/2006 15:04:05"), filename)
+	err = cmd.Start()
+	if err != nil {
+		panic(err)
+	}
+
 	//fmt.Printf("setfile -d \"%s\" %s\n", t.Format("01/02/2006 15:04:05"), filename)
 
 }
